@@ -26,7 +26,7 @@ namespace UnityGLTF
 
 		// Temporary setting to avoid validation issue 'not multiple of 4' in bufferView.offset
 		private bool _forceIndicesUint = true;
-
+		private bool _useMecanimNames = true;
 		private bool _exportAnimation = true;
 		private bool _bakeSkinnedMeshes = false;
 		private Dictionary<string, string> _exportedFiles;
@@ -191,12 +191,12 @@ namespace UnityGLTF
 		/// </summary>
 		/// <param name="path">File path for saving the GLTF and binary files</param>
 		/// <param name="fileName">The name of the GLTF file</param>
-		public void SaveGLTFandBin(string path, string fileName)
+		public void SaveGLTFandBin(string path, string fileName, bool useMecanimNames)
 		{
 			string binPath = Path.Combine(path, fileName + ".bin");
 			var binFile = File.Create(binPath);
 			_bufferWriter = new BinaryWriter(binFile);
-
+			_useMecanimNames = useMecanimNames;
 			_root.Scene = ExportScene(fileName, _rootTransforms);
 			if (_exportAnimation)
 			{
@@ -1961,7 +1961,7 @@ namespace UnityGLTF
 
 				for (int i = 0; i < clips.Length; i++) {
 					GLTF.Schema.Animation anim = new GLTF.Schema.Animation();
-					anim.Name = GLTFEditorExporter.cleanNonAlphanumeric(a.name);
+					anim.Name = _useMecanimNames ? clips[i].name : GLTFEditorExporter.cleanNonAlphanumeric(a.name);
 					convertClipToGLTFAnimation(ref clips[i], ref transform, ref anim);
 
 					if (anim.Channels.Count > 0 && anim.Samplers.Count > 0) {
@@ -1976,7 +1976,7 @@ namespace UnityGLTF
 					AnimationClip clip = state.clip;
 
 					GLTF.Schema.Animation anim = new GLTF.Schema.Animation();
-					anim.Name = GLTFEditorExporter.cleanNonAlphanumeric(state.name);
+					anim.Name = _useMecanimNames ? clip.name : GLTFEditorExporter.cleanNonAlphanumeric(state.name);
 					convertClipToGLTFAnimation(ref clip, ref transform, ref anim);
 
 					if (anim.Channels.Count > 0 && anim.Samplers.Count > 0) {

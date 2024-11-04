@@ -75,6 +75,7 @@ namespace Plattar {
 
 			EditorGUILayout.BeginVertical();
 			selectedObject = (GameObject) EditorGUILayout.ObjectField("Export Object", selectedObject, typeof(GameObject), true);
+			PlattarExporterOptions.ZipOutput = EditorGUILayout.Toggle("Create Zip Archive", PlattarExporterOptions.ZipOutput);
 			EditorGUILayout.EndVertical();
 
 			if (selectedObject == null) {
@@ -127,9 +128,21 @@ namespace Plattar {
 				
 				EditorGUILayout.BeginVertical();
 
-				if (GUILayout.Button($"Export {selectionName} to GLTF")) {
-					if (GenerateGLTFZipped(selectedObject) != null) {
-						EditorUtility.DisplayDialog("Successful Export", "GLTF Exported and Zipped Successfully", "OK");
+				if (GUILayout.Button($"Export {selectionName} to GLTF"))
+				{
+					if (PlattarExporterOptions.ZipOutput)
+                    {
+						if (GenerateGLTFZipped(selectedObject) != null)
+						{
+							EditorUtility.DisplayDialog("Successful Export", "GLTF Exported and Zipped Successfully", "OK");
+						}
+					}
+					else
+					{
+						if (GenerateGLTFUnzipped(selectedObject) != null)
+						{
+							EditorUtility.DisplayDialog("Successful Export", "GLTF Exported Successfully", "OK");
+						}
 					}
 				}
 
@@ -199,6 +212,7 @@ namespace Plattar {
 			EditorGUILayout.LabelField("Animation Options");
 
 			PlattarExporterOptions.ExportAnimations = EditorGUILayout.Toggle("Export Animations", PlattarExporterOptions.ExportAnimations);
+			PlattarExporterOptions.UseMecanimNames = EditorGUILayout.Toggle("Use Mecanim Names", PlattarExporterOptions.UseMecanimNames);
 
 			EditorGUILayout.EndVertical();
 		}
@@ -207,27 +221,43 @@ namespace Plattar {
 		 * Generate the GLTF file and zip it all up
 		 */
 		public static Tuple<string, string, string> GenerateGLTFZipped(GameObject selectedObject) {
-			var path = GenerateGLTF(selectedObject);
+			var path = GenerateGLTF(selectedObject, true);
 
 			if (path == null) {
 				return path;
 			}
-
+			
 			// otherwise, we need to zip up the entire directory
 			// and delete the original
-			PlattarExporterOptions.CompressDirectory(path.Item2, path.Item1 + "/" + path.Item3);
+			PlattarExporterOptions.CompressDirectory(path.Item2, path.Item1 + "\\" + path.Item3);
 			PlattarExporterOptions.DeleteDirectory(path.Item2);
 
+			return path;
+		}
+
+		public static Tuple<string, string, string> GenerateGLTFUnzipped(GameObject selectedObject)
+        {
+			var path = GenerateGLTF(selectedObject, false);
+			if (path == null)
+			{
+				return path;
+			}
+			PlattarExporterOptions.CopyDirectory(path.Item2, path.Item1 + "\\" + path.Item3);
+			PlattarExporterOptions.DeleteDirectory(path.Item2);
 			return path;
 		}
 
 		/**
 		 * Generate a non-zipped GLTF file with all folders etc
 		 */
-		public static Tuple<string, string, string> GenerateGLTF(GameObject selectedObject) {
+		public static Tuple<string, string, string> GenerateGLTF(GameObject selectedObject, bool zip)
+		{
 			string selectionName = selectedObject.name;
 
-			string fullpath = EditorUtility.SaveFilePanel("glTF Export Path", PlattarExporterOptions.LastEditorPath, selectionName, "zip");
+			string fullpath = "";
+			if (zip) fullpath = EditorUtility.SaveFilePanel("glTF Export Path", PlattarExporterOptions.LastEditorPath, selectionName, "zip");
+			else fullpath = EditorUtility.SaveFolderPanel("glTF Export Path", PlattarExporterOptions.LastEditorPath, selectionName);
+			if (fullpath.Length == 0) return null;
 			PlattarExporterOptions.LastEditorPath = Path.GetDirectoryName(fullpath);
 
 			string selectedName = Path.GetFileNameWithoutExtension(fullpath);
@@ -240,7 +270,7 @@ namespace Plattar {
 				if (info.Exists) {
 					if (PlattarExporterOptions.ExportAnimations == true) {
 						var exporter = new GLTFEditorExporter(new Transform[] { selectedObject.transform });
-						exporter.SaveGLTFandBin(newpath, selectionName);
+						exporter.SaveGLTFandBin(newpath, selectionName, PlattarExporterOptions.UseMecanimNames);
 					} 
 					else {
 						var exporter = new GLTFSceneExporter(new Transform[] { selectedObject.transform });

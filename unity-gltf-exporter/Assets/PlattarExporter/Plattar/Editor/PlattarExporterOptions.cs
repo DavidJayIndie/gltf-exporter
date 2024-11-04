@@ -3,6 +3,7 @@
 using System;
 using System.IO;
 using Ionic.Zip;
+using UnityEngine;
 
 namespace Plattar {
 	public class PlattarExporterOptions {
@@ -10,6 +11,8 @@ namespace Plattar {
 		public static bool IsZip = true;
 		public static string LastEditorPath = "";
 		public static bool ExportAnimations = true;
+		public static bool UseMecanimNames = true;
+		public static bool ZipOutput = false;
 
 		public static void CompressDirectory(string source, string destination) {
 			// delete any files that exist
@@ -25,6 +28,16 @@ namespace Plattar {
 			if (File.Exists(target_file)) {
 				File.SetAttributes(target_file, FileAttributes.Normal);
 				File.Delete(target_file);
+			}
+		}
+
+		public static void CopyDirectory(string source, string destination)
+        {
+			string[] files = Directory.GetFiles(source);
+			foreach (string file in files)
+			{
+				string baseFile = file.Substring(file.LastIndexOf("\\"));
+				File.Copy(file, destination + baseFile, true);
 			}
 		}
 
